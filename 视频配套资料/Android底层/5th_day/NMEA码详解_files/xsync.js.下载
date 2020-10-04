@@ -1,0 +1,406 @@
+/**
+ * @(#) xsyc.js version v1.00 build a 100
+ *
+ *  Copyright(??????) Do Not Erase This Comment!!! (?? ???????? ?????? ????)
+ *
+ *  Do Not re-distribute with-out permission. especially out-side of LG-CNS.
+ *  ???? ???? ?????? ?????? ??????. ???? LG-CNS?? ?????? ?????? ???????? ??????.
+ *
+ * AUTHORS LIST       E-MAIL                   HOMEPAGE
+ * TK Shin            tkyushin@lgcns.com       http://www.javatoy.net
+ */
+ 
+if (!lafj) var lafj = {};
+
+lafj.xSync = function (url, method) {
+    this.url = url;
+    this.method = method ? method : lafj.xSync.options.method;
+    this.request = lafj.xSync.getRequest();
+    this.async = lafj.xSync.options.asyncMode;
+    this.query = "";
+    this.param = new Array();
+}
+
+lafj.xSync.options = {
+  debug            : false,
+  nullToInitialize : true,
+  method           : "POST", //test for get style
+  reqContentType   : "application/x-www-form-urlencoded",
+  resContentType   : "application/xml",
+  readyState       : {"UNINITIALIZED" : 0, "LOADING" : 1, "LOADED" : 2, "INTERACTIVE" : 3, "COMPLETE" : 4},
+  asyncMode        : false,
+  progressbar      : false //** todo **
+}
+
+lafj.xSync.messages = {
+	"ERR001"   : "Server commnuication failed.",
+	"ERR002"   : "Browser doesn't support XMLHttpRequest!",
+	"ERR003"   : "lafj.xSync object is exhausted.\nMake another instance via new lafj.xSync(url)",
+	"ERR004"   : "Resoponse content-type is \"\"\nIt should be \"" + lafj.xSync.options.resContentType +"\"",
+	"ERR005"   : "Resoponse content-type dismatched\nIt should be \"" + lafj.xSync.options.resContentType +"\"",
+	"ERR006"   : "Resoponse is empty",
+	"PREFIX"   : "lafj.xSync",
+	"POSTFIX"  : "Please consult site manager!",
+	"SEP"      : "===========================================\n"
+}
+	
+lafj.xSync.isXMLHttp = function (arg) {
+	if (!arg) return false;
+	if (lafj.xSync.isie()  && (arg instanceof ActiveXObject) && (typeof(arg.readyState) != 'undefined')) return true;
+  if (lafj.xSync.isff() && (arg instanceof XMLHttpRequest) && (typeof(arg.readyState) != 'undefined')) return true;
+	return false;
+}
+
+lafj.xSync.getXMLHttpStatus = function(request) {
+	if (!(lafj.xSync.isXMLHttp(request))) return "";
+	var message = "XMLHttpRequest information\n";
+	message += "status : " + request.status ;
+	if (request.status == "12029") message += " (connection to the server failed)";
+	if (request.status == "404") message += " (Not found)";
+	message += "\nreadyState :" + request.readyState; 
+	if (request.getAllResponseHeaders()) message += "\nheaders:\n" + request.getAllResponseHeaders();
+	return message;
+}
+
+lafj.xSync.isie = function() {
+	return window.ActiveXObject ? true : false;
+}
+
+lafj.xSync.isff = function() {
+	return /*window.XMLHttpRequest ? true :*/ false;
+}
+
+lafj.xSync.getMessage = function (code) {
+	var message =  lafj.xSync.messages[code];
+	return lafj.xSync.messages[code] ? lafj.xSync.messages[code] : code;
+}
+
+lafj.xSync.alert = function(arg, request) {
+	var message = "";
+	var code = "";
+	var sep = lafj.xSync.getMessage("SEP");
+	if (typeof(arg) == "string") {
+		message = lafj.xSync.getMessage(arg);
+		code = message == arg ? "ERR999" : arg;
+		if (!message) message = arg;
+	} else if (arg instanceof Error) {
+		code =  "ERR" + ( arg.number & 0xFFFF);
+		message = arg + "\n" + arg.description;
+	} else {
+		code = "EXCEPTION";
+		message = arg;
+	}
+	
+	if (request && lafj.xSync.isXMLHttp(request)) {
+		message += "\n" + sep + lafj.xSync.getXMLHttpStatus(request);
+	}
+ 	alert ("[" + code +"] on " + lafj.xSync.messages["PREFIX"] +"\n" + sep + message + "\n" + sep +  lafj.xSync.messages["POSTFIX"]);
+}
+
+lafj.xSync.getRequest = function() {
+  var request = null;
+  if (lafj.xSync.isie()) {
+    try { request = new ActiveXObject('Msxml2.XMLHTTP'); } catch (e) {}
+    if (!request) try { request = new ActiveXObject('Microsoft.XMLHTTP'); } catch (e) {}
+  }
+		
+  if (!request && lafj.xSync.isff())  {
+    try { request = new XMLHttpRequest(); } catch (e) {}
+  }
+  
+  if (request == null) lafj.xSync.alert("ERR002");
+  return request;
+}
+
+lafj.xSync.prototype.fire = function() {
+  if (!this.request) { return; }
+  
+  if (this.request.readyState != lafj.xSync.options.readyState.UNINITIALIZED ) {
+  	lafj.xSync.alert("ERR003");
+  	return;
+  }
+  try {
+    var instance = this;
+
+   	this.request.onreadystatechange = function() {
+   		lafj.xSync.onreadystatechange.call(instance);
+   	}
+    
+    this.request.open(this.method, this.url, this.async);
+    
+    //** todo : check for more content-type
+    if (this.method == "POST") this.request.setRequestHeader('Content-Type', lafj.xSync.options.reqContentType);
+    
+    this.request.send(this.query);
+    
+    if ( lafj.xSync.isff() && !this.async) { // for fox sync mode call-back invoke
+    	lafj.xSync.onreadystatechange.call(instance);
+    }
+    
+  } catch (e) { 
+  	if (this.async || !lafj.xSync.isie()) {
+  		lafj.xSync.alert(e, this.request);
+  	}
+  }
+}
+
+lafj.xSync.onreadystatechange = function() {
+  if (this.request.readyState == lafj.xSync.options.readyState.COMPLETE) {
+    if (this.request.status == 200 || this.request.status==0 ) {
+      if (lafj.xSync.options.debug) { alert (this.request.responseText); }
+      this.callback.call(this);
+    } else {
+    	lafj.xSync.alert("ERR001", this.request);
+    }
+  }
+}
+
+lafj.xSync.prototype.callback  = function() {
+	var contentType = this.request.getResponseHeader("Content-Type");
+	if (contentType.indexOf(lafj.xSync.options.resContentType) < 0) {
+		var code = contentType == "" ? "ERR004" : "ERR005";
+		lafj.xSync.alert(code, this.request);
+		if (contentType.indexOf("text/html") >= 0) {
+			var oRemote = window.open("about:blank", "xSync");
+			oRemote.document.write(this.request.responseText);
+		}
+		return;
+	}
+	
+	var xmlDoc = this.request.responseXML.documentElement;
+	
+	if (xmlDoc == null) {
+		lafj.xSync.alert("ERR006", this.request);
+		return;
+	}
+	
+	var instance = this;
+	var error = xmlDoc.getAttribute("error");
+	if (error) {
+		lafj.xSync.alert(lafj.xSync.getText(xmlDoc), this.request);
+		return;
+	}
+	
+	var onbefore = xmlDoc.getAttribute("onBeforeAction");
+	var onafter = xmlDoc.getAttribute("onAfterAction");
+	
+	if (onbefore && lafj.xSync.doAction(onbefore, instance, xmlDoc) == false ) return;
+	
+  var until = xmlDoc.childNodes.length;
+  var flag = true;
+  
+  for (var idx=0; idx < until; idx++) {
+  	var peer = xmlDoc.childNodes[idx];
+  	if (peer.nodeType != 1) continue;
+  	if (lafj.xSync.handler[peer.nodeName])  {
+  		var json = lafj.xSync.parse(peer);
+  		if (json.onBeforeAction && lafj.xSync.doAction(json.onBeforeAction, instance, json) == false ) continue;
+  		if (lafj.xSync.handler[peer.nodeName].call(this, json, peer) == false) {
+  			flag = false;
+  			break;
+  		}
+  		if (json.onAfterAction) lafj.xSync.doAction(json.onAfterAction, instance, json);
+  	}
+  }
+
+	if (flag && onafter) lafj.xSync.doAction(onafter, instance, xmlDoc);
+}
+
+lafj.xSync.doAction  = function(execCmd, instance, param) {
+	if (window[execCmd] && typeof(window[execCmd]) == "function") {
+		var flag = window[execCmd].call(instance, param);
+	}
+}
+
+lafj.xSync.doAnchor  = function(href, target) {
+  var oAnchor = document.createElement("A");
+  oAnchor.href = href;
+  if (target) oAnchor.target = target;
+  document.body.insertBefore(oAnchor);
+  oAnchor.click();
+  delete oAnchor;	
+}
+
+lafj.xSync.parse = function (xmlnode) {
+
+	if (xmlnode.nodeType != 1) return null;
+	var json = {};
+	var until = xmlnode.attributes.length;
+	for (var idx=0; idx < until; idx++) {
+		var peer = xmlnode.attributes[idx];
+		if (peer.nodeType != 2) continue;
+		json[peer.nodeName] = lafj.xSync.getText(peer);
+	}
+	json["$text"] = lafj.xSync.getText(xmlnode);
+	json["$name"] = xmlnode.nodeName;
+	
+  var until = xmlnode.childNodes.length;
+  
+  for (var idx=0; idx < until; idx++) {
+  	var peer =  xmlnode.childNodes[idx];
+  	var parsed = lafj.xSync.parse(peer);
+  	if (!parsed) continue;
+
+  	if (typeof(json[peer.nodeName]) == "undefined") json[peer.nodeName] = new Array();
+  	var len = json[peer.nodeName].length;
+  	json[peer.nodeName][len] = parsed;
+  	
+  }	
+  
+  json.toString = function() {
+		return xmlnode.xml.replace(/\t/g,"  ");
+  }
+  	
+  return json;
+}	
+
+lafj.xSync.getText = function(oNode) {  
+	var text = (oNode.text != undefined) ? oNode.text : oNode.textContent;
+	if (text == "null" && lafj.xSync.options.nullToInitialize == true) text = "";
+	return text;
+}
+
+lafj.xSync.handler = {};
+
+lafj.xSync.handler.select = function(json) {
+	var otag = lafj.xSync.$(json.id);
+	if (!otag) {	
+		lafj.xSync.alert("HTML Tag not found for id \"" + json.id +  "\"");		
+		return false;
+	}
+	
+	if (json.clear) {
+		var size = otag.length;
+  	for (var idx=0; idx < size ; idx++) otag.remove(0);	
+	}
+	
+	if (json.option) {
+		var until = json.option.length;
+		for (var idx=0; idx < until; idx++) {
+   	 var option = new Option( json.option[idx].$text, json.option[idx].value );
+   	 otag.options.add(option);
+   	}			
+	}
+}
+
+lafj.xSync.handler.alert = function(json) {
+	alert(json.$text);
+}
+
+lafj.xSync.handler.LData = function(json) {}
+
+lafj.xSync.handler.LMultiData = function(json) {}
+
+lafj.xSync.handler.string = function(json) {}
+
+lafj.xSync.handler.innerHTML = function(json) {
+	if (!json.cell) return;
+	for (var idx=0; idx<json.cell.length; idx++) {
+		var oCell = lafj.xSync.$(json.cell[idx].id);
+		if (oCell) oCell.innerHTML = json.cell[idx].$text;
+	}
+}
+
+lafj.xSync.handler.outerHTML = function(json) {
+	if (!json.cell) return;
+	for (var idx=0; idx<json.cell.length; idx++) {
+		var oCell = lafj.xSync.$(json.cell[idx].id);
+		if (oCell) oCell.outerHTML = json.cell[idx].$text;
+	}
+}
+
+lafj.xSync.handler.inputSetter = function(json) {
+	var oform = lafj.xSync.$(json.id);
+	if (!oform) {	
+		lafj.xSync.alert("HTML Tag not found for id \"" + json.id +  "\"");		
+		return false;
+	}
+	
+	if (!json.cell) return;
+	for (var idx=0; idx<json.cell.length; idx++) {
+		var oInput = oform[json.cell[idx].id];
+		if (!oInput) continue;
+			lafj.xSync.setInputValue(oInput, json.cell[idx].$text);
+	}
+}
+
+lafj.xSync.setInputValue = function(oInput, value) {
+	if (!oInput) return;
+	var tagName = oInput.tagName;
+	if (!tagName && oInput.length) {
+			for (var idx=0; idx<oInput.length; idx++) {
+				lafj.xSync.setInputValue(oInput[idx], value);
+			}		
+	} else if (tagName == "INPUT" ||  tagName == "SELECT" || tagName == "TEXTAREA") {
+		  switch (oInput.type) {
+		    case "text" :  case "hidden" : case "password" : case "textarea" : 
+		    case "select-one" : case "select-multiple" :
+		      oInput.value = value;
+		    break;
+		    case "radio" :  case "checkbox" :
+		      oInput.checked = (oInput.value == value) ? true : false;
+		    break;		
+		  }
+	} else {
+		
+	}
+}
+	
+lafj.xSync.$ = function(id) { 
+	 
+	if (arguments.length == 1 && typeof(id) == "string" ) return document.getElementById(id);
+	
+  var elements = new Array();
+  for (var i = 0; i < arguments.length; i++) {
+    var element = arguments[i];
+    if (typeof element == 'string') { 
+    	element = document.getElementById(element);
+    }
+    elements[elements.length] = element;
+  }
+
+  return elements;	
+}
+
+/* 
+	todo : addQuery object
+	- single tag (input, textarea, select
+	- form tag (all inputs)
+*/
+
+lafj.xSync.prototype.addQuery = function(name, value) {
+  if (this.query) this.query += "&";
+  this.query += name + "=" + value;
+}
+
+/*
+
+lafj.xSync.handler.trIncreaser = function(json) {
+	var sourceTable = lafj.xSync.$(json.sid);
+	var targetTable = lafj.xSync.$(json.tid);
+
+	if (json.clear) {
+		var size = targetTable.tBodies[0].rows.length;
+  	for (var idx=1; idx < size ; idx++) targetTable.tBodies[0].deleteRow(1);	
+	}
+
+	if (!json.tr) return;
+	for (var idx=0; idx<json.tr.length; idx++) {
+		var oTr = lafj.xSync.cloneRow(sourceTable, targetTable);
+		for (var jdx=0; jdx < oTr.cells.length; jdx++) {
+			var tr = json.tr[idx];
+			var td = tr[oTr.cells[jdx].id];
+			oTr.cells[jdx].innerHTML = td[0].$text;//;
+		}
+	}
+}
+
+lafj.xSync.cloneRow = function(osTable, otTable) {
+	var oTR = osTable.tBodies[0].rows[0];
+	var oNewTR = oTR.cloneNode(true);
+	otTable.tBodies[0].appendChild(oNewTR);
+//	if (xjosEnable == true) xjosiate(oNewTR);
+	return oNewTR;
+}
+
+*/

@@ -1,0 +1,1 @@
+cmd_/home/george/src_210/mydrv/led_drv/s5pv210_led.ko := /opt/toolchain/toolchain-4.5.1-farsight/bin/arm-none-linux-gnueabi-ld -EL -r  -T /home/george/src_210/linux-3.0.8-FS210/scripts/module-common.lds --build-id  -o /home/george/src_210/mydrv/led_drv/s5pv210_led.ko /home/george/src_210/mydrv/led_drv/s5pv210_led.o /home/george/src_210/mydrv/led_drv/s5pv210_led.mod.o

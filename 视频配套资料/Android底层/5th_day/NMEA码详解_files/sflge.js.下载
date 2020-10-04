@@ -1,0 +1,134 @@
+document.attachEvent ("onreadystatechange", function() {
+   if (document.readyState=="complete")   {
+      if (window.cbOnBeforeLoad) window.cbOnBeforeLoad();
+   }
+})
+
+/**
+ * @type   : function
+ * @access : public
+ * @desc   : 
+ * @author : tkyushin
+ */
+
+function actSubmitValidate(oform, action, target) {
+  if (target) oform.target = target;
+  if (action) oform.action = action;
+  if (!oform.method) oform.method = "post";
+  if (oform.fireSubmit) oform.fireSubmit();
+  else oform.submit();
+  
+}
+
+function actCancel(oform, action, target) {
+  if (target) oform.target = target;
+  if (action) oform.action = action;
+  if (!oform.method) oform.method = "post";
+	oform.reset();
+  oform.submit();
+}
+
+function actSubmit(oform, action, target) {
+  if (target) oform.target = target;
+  if (action) oform.action = action;
+  if (!oform.method) oform.method = "post";
+  oform.submit();
+}
+
+function xjosiate(oTag) {
+  _xjosiage(oTag.getElementsByTagName("INPUT"));
+  _xjosiage(oTag.getElementsByTagName("SELECT"));
+  _xjosiage(oTag.getElementsByTagName("TEXTAREA"));
+}
+
+function _xjosiage(oTags) {
+  for (var idx=0; idx < oTags.length; idx ++) {
+    if (!window.xGetOption("X_SUPPORT_HIDDEN_TYPE") && oTags[idx].type == 'hidden') continue;
+    oTags[idx].initialize = em_initialize;
+    oTags[idx].initialize(oTags[idx].form);
+  }
+}
+
+function findParentTag(oTag, tagName) {
+  while (oTag && oTag.tagName != "BODY") {
+    if (oTag.tagName == tagName) return oTag;
+    oTag = oTag.parentNode;
+  }
+  return null;
+}
+
+function findTagByName(oTag, tagName, name) {
+	var tags = oTag.getElementsByTagName(tagName);
+	for (var idx=0; idx<tags.length; idx++) {
+		if (tags[idx].name == name) return tags[idx];
+	}
+  return null;
+}
+
+function flipCheckBox(oCheck) {
+	if (!oCheck) return;
+	if (oCheck.tagName && oCheck.tagName=="INPUT" && oCheck.type=="checkbox") {
+		oCheck.checked = oCheck.checked ? false : true;	
+	} else if (oCheck.length && oCheck.length > 1) {
+		var until = oCheck.length;
+		for (var idx=0; idx < until; idx++) {
+			oCheck[idx].checked = oCheck[idx].checked ? false : true;	
+		}		
+	}
+}
+
+function getCheckedOnly(inputs) {
+	var result = new Array();
+	if (inputs && inputs.tagName == "INPUT" && inputs.checked) result[0] = inputs;
+	else if (inputs && inputs.length && inputs.length > 0 ) {
+		var until = inputs.length;
+		for (var idx=0; idx<until; idx++) {
+			if (inputs[idx].tagName == "INPUT" && inputs[idx].checked) result[result.length] = inputs[idx];
+		}
+	}
+	return result;
+}
+
+
+function cloneRow(sourceRowId, targetTableId, xjosEnable) {
+	var oTR = document.getElementById(sourceRowId);
+	var tTable = document.getElementById(targetTableId);
+	var tTbody = tTable.tBodies[0];
+	var oNewTR = oTR.cloneNode(true);
+	oNewTR.id = "";
+	tTbody.appendChild(oNewTR);
+	if (xjosEnable == true) xjosiate(oNewTR);
+	return oNewTR;
+}
+
+function getLength(inputs) {
+	return (!inputs || !inputs.length) ?  0 : inputs.length;
+}
+
+
+function clearInput(oInput) {
+	if (oInput.tagName == "FORM") {
+		var until = oInput.elements.length;
+		for (var idx=0; idx < until; idx++) {
+			clearInput(oInput.elements[idx]);
+		}
+	} else if (oInput.tagName == "INPUT" ||  oInput.tagName == "SELECT" || oInput.tagName == "TEXTAREA") {
+		  switch (oInput.type) {
+		    case "text" :  case "hidden" : case "password" : case "textarea" : 
+  			case "select-one" : case "select-multiple" :		    
+		      oInput.value = "";
+		    break;
+		    case "radio" :  case "checkbox" :
+		      oInput.checked = false;
+		    break;		
+		  }
+	} 
+}
+
+function removeOptions(oSelect) {
+	if (oSelect.tagName != "SELECT") return;
+		var until = oSelect.options.length;
+  	for (var idx=0; idx < until ; idx++) oSelect.remove(0);	
+	
+}
+		
